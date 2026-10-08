@@ -1,6 +1,6 @@
 import { api } from './api.js?v=devices-20261008';
 const $ = selector => document.querySelector(selector);
-let playlists = [], groups = [], refreshing = false;
+let playlists = [], groups = [], tvDevices = [], refreshing = false;
 const tvLink = new URL('tv.html', location.href).href;
 
 function escapeHtml(value = '') { return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])); }
@@ -20,6 +20,44 @@ function videoOptions(playlistId, selectedIndex = 0) {
   const playlist = playlists.find(item => item.id === playlistId);
   if (!playlist?.items.length) return '<option value="">Playlist vazia</option>';
   return playlist.items.map((video, index) => `<option value="${index}" ${index === selectedIndex ? 'selected' : ''}>${index + 1}. ${escapeHtml(video.name)}</option>`).join('');
+}
+function renderGroups() {
+  const list = $('#groupList');
+  $('#groupSummary').textContent = `${groups.length} grupo${groups.length === 1 ? '' : 's'}`;
+  if (!groups.length) {
+    list.innerHTML = '<div class="group-empty"><strong>Nenhum grupo cadastrado</strong><span>Crie seu primeiro grupo acima, como “Recepção” ou “Loja Centro”.</span></div>';
+    return;
+  }
+  list.innerHTML = groups.map(group => {
+    const count = tvDevices.filter(device => device.group_id === group.id).length;
+    const membership = count ? `${count} TV ${count === 1 ? 'associada' : 'associadas'}` : 'Nenhuma TV associada';
+    return `<article class="group-card" data-group-id="${group.id}"><div class="group-card-info"><strong>${escapeHtml(group.name)}</strong><span>${membership}</span></div><div class="group-card-edit"><input data-group-name value="${escapeHtml(group.name)}" maxlength="80" aria-label="Nome do grupo ${escapeHtml(group.name)}"><button class="button button-quiet button-small" data-save-group type="button">Salvar nome</button><button class="button button-quiet button-small group-delete" data-delete-group type="button">Excluir</button></div><small class="group-card-status" data-group-message></small></article>`;
+  }).join('');
+
+  list.querySelectorAll('[data-group-id]').forEach(card => {
+    const group = groups.find(item => item.id === card.dataset.groupId);
+    const status = card.querySelector('[data-group-message]');
+    card.querySelector('[data-save-group]').addEventListener('click', async () => {
+      const name = card.querySelector('[data-group-name]').value.trim();
+      if (!name) { status.textContent = 'Digite um nome para o grupo.'; status.classList.add('has-error'); return; }
+      try { await api.renameTvGroup(group.id, name); await refreshDevices(); }
+      catch (error) { status.textContent = error?.message || 'Não foi possível renomear o grupo.'; status.classList.add('has-error'); }
+    });
+    card.querySelector('[data-delete-group]').addEventListener('click', async () => {
+      const count = tvDevices.filter(device => device.group_id === group.id).length;
+      const detail = count ? ` As ${count} TV(s) associadas ficarão sem grupo.` : '';
+      if (!confirm(`Excluir o grupo “${group.name}”?${detail}`)) return;
+      try { await api.deleteTvGroup(group.id); await refreshDevices(); }
+      catch (error) { status.textContent = error?.message || 'Não foi possível excluir o grupo.'; status.classList.add('has-error'); }
+    });
+  });
+}
+function selectConnectTab(tabName) {
+  const showDevices = tabName === 'devices';
+  $('#devicesTab').setAttribute('aria-selected', String(showDevices));
+  $('#groupsTab').setAttribute('aria-selected', String(!showDevices));
+  $('#devicesView').hidden = !showDevices;
+  $('#groupsView').hidden = showDevices;
 }
 function seenText(lastSeen, online) {
   if (online) return 'Conectada agora';
@@ -86,25 +124,35 @@ async function refreshDevices() {
   try {
     const [devices, nextGroups] = await Promise.all([api.getTvDevices(), api.getTvGroups()]);
     const [globalState, deviceStates] = await Promise.all([api.getState(), api.getTvDeviceStates(devices.map(device => device.id))]);
-    groups = nextGroups; playlists = globalState.playlists;
+    groups = nextGroups; tvDevices = devices; playlists = globalState.playlists;
     const now = Date.now();
     const entries = devices.map(device => ({ device, state: deviceStates[device.id], online: Boolean(device.last_seen_at && now - Date.parse(device.last_seen_at) < 90000) }));
     renderDevices(entries);
+    renderGroups();
   } catch (error) { showError(error); }
   finally { refreshing = false; }
 }
 
-$('#createTvGroup').addEventListener('click', async () => {
-  const name = prompt('Nome do grupo de telas (ex.: Parede da recepção):');
-  if (!name?.trim()) return;
-  try { await api.createTvGroup(name); await refreshDevices(); }
-  catch (error) { showError(error); }
+$('#devicesTab').addEventListener('click', () => selectConnectTab('devices'));
+$('#groupsTab').addEventListener('click', () => selectConnectTab('groups'));
+$('#createGroupForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const input = $('#groupName');
+  const name = input.value.trim();
+  if (!name) return;
+  try {
+    $('#groupStatus').classList.remove('has-error');
+    await api.createTvGroup(name);
+    input.value = '';
+    $('#groupStatus').textContent = `Grupo “${name}” criado. Agora você pode associar as TVs a ele na aba Dispositivos.`;
+    await refreshDevices();
+  } catch (error) { showError(error, $('#groupStatus')); }
 });
 
 async function init() {
   const { session } = await api.getSession();
   if (!session) { location.replace('login.html'); return; }
   await refreshDevices();
-  setInterval(() => { const active = document.activeElement; if (!$('#deviceList').contains(active) || !active.matches('input,select')) refreshDevices(); }, 15000);
+  setInterval(() => { const active = document.activeElement; if (!document.querySelector('.page-content').contains(active) || !active.matches('input,select,textarea')) refreshDevices(); }, 15000);
 }
 init().catch(showError);

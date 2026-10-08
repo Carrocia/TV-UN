@@ -155,6 +155,8 @@ export const api = {
   async getTvDevices() { return unwrap(await getClient().from('tv_devices').select('*').order('created_at')) || []; },
   async getTvGroups() { return unwrap(await getClient().from('tv_groups').select('*').order('created_at')) || []; },
   async createTvGroup(name) { return unwrap(await getClient().from('tv_groups').insert({ name: name.trim() }).select().single()); },
+    async renameTvGroup(id, name) { unwrap(await getClient().from('tv_groups').update({ name: name.trim() }).eq('id', id)); },
+    async deleteTvGroup(id) { unwrap(await getClient().from('tv_groups').delete().eq('id', id)); },
   async updateTvDevice(deviceId, updates) { unwrap(await getClient().from('tv_devices').update(updates).eq('id', deviceId)); },
   async sendDeviceCommand(deviceId, { playlistId, current = 0, action = 'play', position = 0 }) {
     const state = await fetchState();

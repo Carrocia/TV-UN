@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#060810">
   <title>Conectar TVs · Uni</title>
-  <link rel="stylesheet" href="styles/tokens.css"><link rel="stylesheet" href="styles/components.css"><link rel="stylesheet" href="styles/dashboard.css"><link rel="stylesheet" href="styles/dashboard-theme.css"><link rel="stylesheet" href="styles/devices.css">
+  <link rel="stylesheet" href="styles/tokens.css"><link rel="stylesheet" href="styles/components.css"><link rel="stylesheet" href="styles/dashboard.css"><link rel="stylesheet" href="styles/dashboard-theme.css"><link rel="stylesheet" href="styles/devices.css?v=groups-20261008">
 </head>
 <body data-theme="dark">
   <div class="bg-fx" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="grid"></span></div>
@@ -19,11 +19,21 @@
       <div class="page-content">
         <section class="page-heading"><div><p class="eyebrow">DISPOSITIVOS DAS FILIAIS</p><h1>Suas telas conectadas.</h1><p class="page-intro">Dê um nome a cada TV, organize telas lado a lado e escolha o que cada uma vai reproduzir.</p></div></section>
         <section class="connect-section link-section"><div class="connect-copy"><p class="section-kicker">LINK DO PLAYER</p><h2>Abra nas TVs das filiais</h2><p>O player registra esta tela automaticamente e aparece abaixo quando estiver conectado.</p></div><div class="tv-link-card"><div class="tv-link-icon">▣</div><div class="tv-link-details"><span>LINK DIRETO DO PLAYER</span><code id="tvLink">Carregando…</code></div><button class="button button-light button-small" id="copyTvLink" type="button">Copiar link</button></div></section>
-        <section class="panel devices-panel" aria-labelledby="devicesHeading"><div class="panel-header"><div><p class="section-kicker">MONITORAMENTO E CONTROLE</p><h2 id="devicesHeading">Dispositivos</h2><p class="devices-hint">Online quando o player enviou sinal nos últimos 90 segundos. O código identifica o navegador da TV; o site não consegue ler o MAC address.</p></div><div class="device-toolbar"><span class="count-pill" id="deviceSummary">Carregando…</span><button class="button button-quiet button-small" id="createTvGroup" type="button">＋ Grupo de telas</button></div></div><div class="device-list" id="deviceList" aria-live="polite"></div></section>
+        <div class="connect-tabs" role="tablist" aria-label="Gerenciar telas">
+          <button class="connect-tab" id="devicesTab" type="button" role="tab" aria-selected="true" aria-controls="devicesView">Dispositivos</button>
+          <button class="connect-tab" id="groupsTab" type="button" role="tab" aria-selected="false" aria-controls="groupsView">Grupos de telas</button>
+        </div>
+        <section class="panel devices-panel" id="devicesView" role="tabpanel" aria-labelledby="devicesTab"><div class="panel-header"><div><p class="section-kicker">MONITORAMENTO E CONTROLE</p><h2 id="devicesHeading">Dispositivos</h2><p class="devices-hint">Online quando o player enviou sinal nos últimos 90 segundos. O código identifica o navegador da TV; o site não consegue ler o MAC address.</p></div><div class="device-toolbar"><span class="count-pill" id="deviceSummary">Carregando…</span></div></div><div class="device-list" id="deviceList" aria-live="polite"></div></section>
+        <section class="panel groups-panel" id="groupsView" role="tabpanel" aria-labelledby="groupsTab" hidden>
+          <div class="panel-header"><div><p class="section-kicker">ORGANIZAÇÃO DAS TELAS</p><h2>Grupos de telas</h2><p class="devices-hint">Crie grupos por filial ou ambiente. Depois, atribua cada TV ao grupo na aba Dispositivos.</p></div><span class="count-pill" id="groupSummary">0 grupos</span></div>
+          <form class="group-create" id="createGroupForm"><label for="groupName">Novo grupo</label><div class="group-create-row"><input id="groupName" name="name" maxlength="80" placeholder="Ex.: Recepção, Loja Centro" required><button class="button button-primary" type="submit">＋ Criar grupo</button></div></form>
+          <div class="group-list" id="groupList" aria-live="polite"></div>
+          <p class="upload-status" id="groupStatus" role="status" aria-live="polite"></p>
+        </section>
         <p class="upload-status" id="deviceStatus" role="status" aria-live="polite"></p>
       </div>
     </main>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script type="module" src="scripts/connect.js?v=devices-20261008"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script type="module" src="scripts/connect.js?v=groups-20261008"></script>
 </body>
 </html>
