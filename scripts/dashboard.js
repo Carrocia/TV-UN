@@ -1,4 +1,4 @@
-import { api } from './api.js';
+import { api } from './api.js?v=playlists-20261007';
 const $ = selector => document.querySelector(selector);
 let state = { playlists: [], videos: [], current: 0, action: 'pause', position: 0, changedAt: Date.now(), playlistId: null };
 function setTheme(theme) { document.body.dataset.theme = theme; localStorage.setItem('uni-theme', theme); document.querySelectorAll('[data-theme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme))); }
