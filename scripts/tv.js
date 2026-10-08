@@ -1,9 +1,15 @@
-import { api } from './api.js?v=tv-advance-20261008';
+import { api } from './api.js?v=tv-devices-20261008';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');
 const title = document.querySelector('#title');
 const status = document.querySelector('#status');
+const DEVICE_STORAGE_KEY = 'uni-tv-device-id';
+let deviceId;
+try {
+  deviceId = localStorage.getItem(DEVICE_STORAGE_KEY);
+  if (!deviceId) { deviceId = crypto.randomUUID(); localStorage.setItem(DEVICE_STORAGE_KEY, deviceId); }
+} catch { deviceId = crypto.randomUUID(); }
 let state = null;
 let activeVideoId = null;
 let videoElement = null;
@@ -71,7 +77,7 @@ function render(nextState) {
       if (advancing) return;
       advancing = true;
       try {
-        render(await api.advanceFromTv(state.current));
+        render(await api.advanceFromTv(state.current, deviceId));
       } catch (error) {
         console.error('Falha ao avançar a playlist:', error);
         setStatus('Falha ao avançar a playlist', 'error');
@@ -89,16 +95,22 @@ function render(nextState) {
   alignPlayback(state);
 }
 
-api.getState().then(render).catch(error => {
-  const message = error?.message?.startsWith('Configure a Project URL') ? 'Player ainda não configurado' : 'Servidor indisponível';
-  showEmpty(message);
-});
-try {
-  api.subscribe(render, connected => { if (!connected) setStatus('Reconectando…', 'error'); });
-} catch (error) {
-  const message = error?.message?.startsWith('Configure a Project URL') ? 'Player ainda não configurado' : 'Falha ao conectar à programação';
-  showEmpty(message);
+async function connectPlayer() {
+  try {
+    await api.registerTvDevice(deviceId);
+    render(await api.getTvState(deviceId));
+    setInterval(() => api.registerTvDevice(deviceId).catch(error => {
+      console.warn('Falha no sinal de presença da TV:', error);
+      setStatus('Reconectando…', 'error');
+    }), 30000);
+    api.subscribe(render, connected => { if (!connected) setStatus('Reconectando…', 'error'); }, deviceId);
+  } catch (error) {
+    console.error('Falha ao conectar o player da TV:', error);
+    const message = error?.message?.startsWith('Configure a Project URL') ? 'Player ainda não configurado' : 'Falha ao registrar esta TV';
+    showEmpty(message);
+  }
 }
+connectPlayer();
 document.addEventListener('mousemove', showOverlay);
 document.addEventListener('click', () => { if (videoElement && state?.action === 'play') videoElement.play().catch(() => {}); showOverlay(); });
 document.addEventListener('keydown', event => {
