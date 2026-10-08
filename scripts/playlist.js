@@ -1,4 +1,4 @@
-import { api, isSupportedVideo } from './api.js';
+import { api, isSupportedVideo } from './api.js?v=playlists-20261007';
 const $ = selector => document.querySelector(selector);
 let state = null, activePlaylist = null, dragging = null;
 function setTheme(theme) { document.body.dataset.theme = theme; localStorage.setItem('uni-theme', theme); document.querySelectorAll('[data-theme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme))); }

@@ -1,4 +1,4 @@
-import { api } from './api.js';
+import { api } from './api.js?v=playlists-20261007';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');

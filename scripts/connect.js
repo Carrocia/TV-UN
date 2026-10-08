@@ -1,4 +1,4 @@
-import { api } from './api.js';
+import { api } from './api.js?v=playlists-20261007';
 const $ = selector => document.querySelector(selector);
 const link = new URL('tv.html', location.href).href;
 $('#tvLink').textContent = link;
