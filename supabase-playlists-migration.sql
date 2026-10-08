@@ -44,6 +44,11 @@ end $$;
 alter table public.playlists enable row level security;
 alter table public.playlist_items enable row level security;
 
+-- Some newer Supabase projects do not grant Data API table privileges by default.
+grant usage on schema public to anon, authenticated;
+grant select on table public.playlists, public.playlist_items to anon, authenticated;
+grant insert, update, delete on table public.playlists, public.playlist_items to authenticated;
+
 drop policy if exists "Anyone can read playlists" on public.playlists;
 create policy "Anyone can read playlists" on public.playlists for select to anon, authenticated using (true);
 drop policy if exists "Authenticated users manage playlists" on public.playlists;
