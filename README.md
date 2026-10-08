@@ -8,16 +8,18 @@ Painel web para organizar vídeos e sincronizar a reprodução nas TVs das filia
 2. Nunca coloque `service_role` ou uma secret key no navegador. As tabelas e o bucket usam RLS para limitar as gravações a usuários autenticados.
 3. No Supabase, crie o usuário administrador em **Authentication → Users → Add user**. O painel entra com e-mail e senha do Supabase Auth.
 4. Publique os arquivos do site em hospedagem HTTPS, como GitHub Pages. O painel usa Supabase Auth; o player `tv.html` abre sem login.
+5. Para atualizar uma instalação que já usa as tabelas antigas, execute uma vez o arquivo `supabase-playlists-migration.sql` no SQL Editor do Supabase. Ele cria playlists e itens e migra os vídeos atuais para “Playlist padrão”.
 
-O bucket `tv-videos` é público para permitir que as TVs carreguem os vídeos diretamente. Não envie conteúdo confidencial. As alterações nas tabelas `videos` e `playback_state` são recebidas em tempo real pelo Supabase Realtime.
+O bucket `tv-videos` é público para permitir que as TVs carreguem os vídeos diretamente. Não envie conteúdo confidencial. O painel seleciona a playlist a transmitir; a página `playlist.html` cria e organiza playlists, recebe upload e configura a transição de cada vídeo. Alterações em `playlists`, `playlist_items` e `playback_state` são recebidas em tempo real pelo Supabase Realtime.
 
 ## Estrutura
 
-- `index.html`, `login.html`, `tv.html`: telas do painel, autenticação e player das TVs.
+- `index.html`, `playlist.html`, `connect.html`, `login.html`, `tv.html`: páginas do painel, playlists, conexão das TVs, autenticação e player.
 - `styles/`: tokens, componentes e estilos de cada tela.
 - `scripts/api.js`: adaptador Supabase para Auth, Database, Storage e Realtime.
 - `scripts/supabase-config.js`: Project URL e chave pública do projeto.
-- `scripts/dashboard.js`, `scripts/login.js`, `scripts/tv.js`: interações das telas.
+- `scripts/dashboard.js`, `scripts/playlist.js`, `scripts/connect.js`, `scripts/login.js`, `scripts/tv.js`: interações das telas.
+- `supabase-playlists-migration.sql`: migração para playlists nomeadas e transições individuais.
 - `assets/images/`: logos da UNI para fundos claros e escuros.
 - `server.js`: servidor local simples para pré-visualizar o site.
 

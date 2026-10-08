@@ -55,9 +55,12 @@ function render(nextState) {
   title.textContent = `${String(state.current + 1).padStart(2, '0')} · ${current.name}`;
   setStatus(state.action === 'play' ? 'Conectando vídeo…' : 'Pausado', state.action === 'play' ? 'playing' : 'paused');
   if (current.id !== activeVideoId) {
+    const transition = current.transition || 'none';
     activeVideoId = current.id;
     videoElement = document.createElement('video');
     videoElement.className = 'tv-video';
+    if (transition === 'fade') videoElement.classList.add('tv-enter-fade');
+    if (transition === 'slide') videoElement.classList.add('tv-enter-slide');
     videoElement.playsInline = true;
     videoElement.autoplay = true;
     videoElement.preload = 'auto';
