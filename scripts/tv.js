@@ -1,4 +1,4 @@
-import { api } from './api.js?v=stable-transition-20261008';
+import { api } from './api.js?v=instant-playback-20261008';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');
@@ -17,8 +17,6 @@ let displayedVideo = null;
 let pendingVideo = null;
 let warmedVideo = null;
 let warmedVideoId = null;
-let pendingTransition = null;
-let transitionTimer;
 let hideTimer;
 let advancing = false;
 const advancedVideos = new WeakSet();
@@ -36,10 +34,8 @@ function setStatus(message, mode = 'playing') {
 }
 
 function showEmpty(message) {
-  clearTimeout(transitionTimer);
   stage.querySelectorAll('video').forEach(video => { video.pause(); video.remove(); });
   pendingVideo = null;
-  pendingTransition = null;
   warmedVideo = null;
   warmedVideoId = null;
   videoElement = null;
@@ -97,9 +93,6 @@ function render(nextState) {
   title.textContent = `${String(state.current + 1).padStart(2, '0')} · ${current.name}`;
   setStatus(state.action === 'play' ? 'Conectando vídeo…' : 'Pausado', state.action === 'play' ? 'playing' : 'paused');
   if (current.id !== activeVideoId) {
-    const transition = current.transition || 'none';
-    clearTimeout(transitionTimer);
-    pendingTransition = null;
     if (pendingVideo && pendingVideo !== videoElement) pendingVideo.remove();
     const outgoing = displayedVideo?.isConnected ? displayedVideo : null;
     const incoming = warmedVideoId === current.id ? warmedVideo : document.createElement('video');
@@ -112,7 +105,7 @@ function render(nextState) {
     activeVideoId = current.id;
     pendingVideo = incoming;
     videoElement = incoming;
-    incoming.className = `tv-video${transition === 'fade' ? ' tv-incoming tv-incoming-fade' : transition === 'slide' ? ' tv-incoming tv-incoming-slide' : ''}`;
+    incoming.className = 'tv-video';
     incoming.muted = false;
     incoming.playsInline = true;
     incoming.autoplay = true;
@@ -123,42 +116,43 @@ function render(nextState) {
     incoming.addEventListener('loadedmetadata', () => {
       if (incoming === videoElement && state) alignPlayback(state);
     });
-    let transitionStarting = false;
-    let transitionStarted = false;
-    const beginTransition = async () => {
-      if (incoming !== pendingVideo || incoming !== videoElement || transitionStarting || transitionStarted) return;
-      transitionStarting = true;
+    let startInProgress = false;
+    let hasStarted = false;
+    const startVideo = async () => {
+      if (incoming !== pendingVideo || incoming !== videoElement || startInProgress || hasStarted) return;
+      startInProgress = true;
       const canPlay = await alignPlayback(state);
-      transitionStarting = false;
+      startInProgress = false;
       if (!canPlay || incoming !== pendingVideo || incoming !== videoElement) return;
-      transitionStarted = true;
-      pendingTransition = null;
+      hasStarted = true;
       pendingVideo = null;
-      if (!incoming.isConnected) stage.append(incoming);
       displayedVideo = incoming;
-      if (!outgoing || transition === 'none' || !outgoing.isConnected) {
-        outgoing?.remove();
-        incoming.classList.remove('tv-incoming', 'tv-incoming-fade', 'tv-incoming-slide');
-        return;
-      }
-      requestAnimationFrame(() => {
-        incoming.classList.remove(transition === 'fade' ? 'tv-incoming-fade' : 'tv-incoming-slide');
-        outgoing.classList.add(transition === 'fade' ? 'tv-outgoing-fade' : 'tv-outgoing-slide');
-      });
-      transitionTimer = setTimeout(() => {
+      if (outgoing && outgoing !== incoming) {
         outgoing.pause();
         outgoing.remove();
-        incoming.classList.remove('tv-incoming');
-      }, transition === 'fade' ? 850 : 1100);
+      }
     };
-    pendingTransition = beginTransition;
-    incoming.addEventListener('canplay', beginTransition, { once: true });
-    if (incoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) queueMicrotask(beginTransition);
+    incoming.addEventListener('canplay', startVideo, { once: true });
+    if (incoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) queueMicrotask(startVideo);
     incoming.addEventListener('ended', async () => {
       if (advancedVideos.has(incoming) || advancing) return;
       advancedVideos.add(incoming);
       advancing = true;
       const expectedCurrent = state.current;
+      if (state.videos.length === 1) {
+        advancedVideos.delete(incoming);
+        advancing = false;
+        state = { ...state, position: 0, changedAt: Date.now(), action: 'play' };
+        try {
+          incoming.currentTime = 0;
+          await incoming.play();
+          setStatus('Reproduzindo');
+        } catch (error) {
+          console.error('Falha ao reiniciar o vídeo:', error);
+          setStatus('Toque na tela para continuar', 'error');
+        }
+        return;
+      }
       const nextCurrent = (expectedCurrent + 1) % state.videos.length;
       render({ ...state, current: nextCurrent, position: 0, changedAt: Date.now(), action: 'play' });
       try {
@@ -174,7 +168,6 @@ function render(nextState) {
     incoming.addEventListener('error', () => {
       if (incoming !== videoElement) return;
       pendingVideo = null;
-      pendingTransition = null;
       if (outgoing?.isConnected) {
         videoElement = outgoing;
         displayedVideo = outgoing;
@@ -208,7 +201,7 @@ connectPlayer();
 document.addEventListener('mousemove', showOverlay);
 document.addEventListener('click', () => {
   if (videoElement && state?.action === 'play') {
-    videoElement.play().then(() => pendingTransition?.()).catch(() => {});
+    videoElement.play().catch(() => {});
   }
   showOverlay();
 });

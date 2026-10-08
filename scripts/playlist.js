@@ -1,4 +1,4 @@
-import { api, isSupportedVideo } from './api.js?v=tv-advance-20261008';
+import { api, isSupportedVideo } from './api.js?v=instant-playback-20261008';
 const $ = selector => document.querySelector(selector);
 let state = null, activePlaylist = null, dragging = null;
 function setTheme(theme) { document.body.dataset.theme = theme; localStorage.setItem('uni-theme', theme); document.querySelectorAll('[data-theme-choice]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.themeChoice === theme))); }
@@ -19,10 +19,9 @@ function render(next = state) {
   activePlaylist.items.forEach((video, index) => {
     const row = document.createElement('article'); row.className = 'video-row editor-row'; row.draggable = true; row.dataset.itemId = video.itemId;
     const safeName = video.name.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    row.innerHTML = `<span class="drag-handle" aria-label="Arrastar para ordenar">⠿</span><span class="video-thumb">▷</span><span class="editor-video-info"><strong class="video-name">${safeName}</strong><small class="video-subtitle">Vídeo ${String(index + 1).padStart(2, '0')}</small></span><label class="transition-label">Transição<select data-transition="${video.itemId}" aria-label="Transição para ${safeName}"><option value="none" ${video.transition === 'none' ? 'selected' : ''}>Sem efeito</option><option value="fade" ${video.transition === 'fade' ? 'selected' : ''}>Dissolver</option><option value="slide" ${video.transition === 'slide' ? 'selected' : ''}>Deslizar</option></select></label><button class="video-action" type="button" data-remove="${video.itemId}" aria-label="Remover ${safeName}" title="Remover vídeo">×</button>`;
+    row.innerHTML = `<span class="drag-handle" aria-label="Arrastar para ordenar">⠿</span><span class="video-thumb">▷</span><span class="editor-video-info"><strong class="video-name">${safeName}</strong><small class="video-subtitle">Vídeo ${String(index + 1).padStart(2, '0')}</small></span><button class="video-action" type="button" data-remove="${video.itemId}" aria-label="Remover ${safeName}" title="Remover vídeo">×</button>`;
     list.appendChild(row);
   });
-  list.querySelectorAll('[data-transition]').forEach(control => control.addEventListener('change', async () => { try { await api.setTransition(control.dataset.transition, control.value); } catch (error) { showError(error); } }));
   list.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', async () => { if (!confirm('Remover este vídeo desta playlist? O arquivo continuará na biblioteca do Supabase.')) return; try { await api.removeItem(button.dataset.remove); render(await api.getState()); } catch (error) { showError(error); } }));
   list.querySelectorAll('.editor-row').forEach(row => {
     row.addEventListener('dragstart', event => { dragging = row.dataset.itemId; row.classList.add('is-dragging'); event.dataTransfer.effectAllowed = 'move'; });

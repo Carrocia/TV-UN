@@ -9,14 +9,14 @@ function getClient() {
   return client;
 }
 function unwrap(result) { if (result.error) throw result.error; return result.data; }
-function mapVideo(row) { return { id: row.id, name: row.name, url: getClient().storage.from(VIDEO_BUCKET).getPublicUrl(row.storage_path).data.publicUrl, type: row.mime_type, uploadedAt: Date.parse(row.created_at), transition: row.transition_effect || 'none' }; }
+function mapVideo(row) { return { id: row.id, name: row.name, url: getClient().storage.from(VIDEO_BUCKET).getPublicUrl(row.storage_path).data.publicUrl, type: row.mime_type, uploadedAt: Date.parse(row.created_at) }; }
 
 async function getPlaylists() {
   const supabase = getClient();
   const rows = unwrap(await supabase.from('playlists').select('*').order('created_at')) || [];
   return Promise.all(rows.map(async playlist => {
-    const items = unwrap(await supabase.from('playlist_items').select('id,video_id,sort_order,transition_effect,videos(*)').eq('playlist_id', playlist.id).order('sort_order')) || [];
-    return { id: playlist.id, name: playlist.name, items: items.map(item => ({ ...mapVideo(item.videos), itemId: item.id, transition: item.transition_effect || 'none' })) };
+    const items = unwrap(await supabase.from('playlist_items').select('id,video_id,sort_order,videos(*)').eq('playlist_id', playlist.id).order('sort_order')) || [];
+    return { id: playlist.id, name: playlist.name, items: items.map(item => ({ ...mapVideo(item.videos), itemId: item.id })) };
   }));
 }
 async function fetchState(deviceId = null) {
@@ -112,7 +112,7 @@ export const api = {
       const countResult = await supabase.from('playlist_items').select('id', { count: 'exact', head: true }).eq('playlist_id', playlistId);
       if (countResult.error) throw countResult.error;
       const count = countResult.count;
-      unwrap(await supabase.from('playlist_items').insert({ playlist_id: playlistId, video_id: video.id, sort_order: count || 0, transition_effect: 'none' }));
+      unwrap(await supabase.from('playlist_items').insert({ playlist_id: playlistId, video_id: video.id, sort_order: count || 0 }));
       return video;
     } catch (error) {
       if (video?.id) await supabase.from('videos').delete().eq('id', video.id);
@@ -121,7 +121,6 @@ export const api = {
     }
   },
   async removeItem(itemId) { unwrap(await getClient().from('playlist_items').delete().eq('id', itemId)); return fetchState(); },
-  async setTransition(itemId, effect) { unwrap(await getClient().from('playlist_items').update({ transition_effect: effect }).eq('id', itemId)); },
   async reorderItems(playlistId, orderedIds) {
     const supabase = getClient();
     for (const [index, id] of orderedIds.entries()) unwrap(await supabase.from('playlist_items').update({ sort_order: index }).eq('id', id).eq('playlist_id', playlistId));
