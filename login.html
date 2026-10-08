@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060810">
+  <title>Acesso · Central de telas</title>
+  <link rel="stylesheet" href="styles/tokens.css">
+  <link rel="stylesheet" href="styles/components.css">
+  <link rel="stylesheet" href="styles/login.css">
+  <link rel="stylesheet" href="styles/login-theme.css">
+</head>
+<body data-theme="dark">
+  <main class="login-card">
+    <a class="brand" href="login.html" aria-label="UNI Internet"><img class="brand-logo logo-dark" src="assets/images/uni-logo-dark.png" alt="UNI Internet"><img class="brand-logo logo-light" src="assets/images/uni-logo-light.png" alt="UNI Internet"><span class="brand-copy"><small>central de telas</small></span></a>
+    <p class="eyebrow">ACESSO DE GERENCIAMENTO</p>
+    <h1 id="formTitle">Entrar na central</h1>
+    <p class="login-intro" id="formDescription">Entre com seu usuário administrador do Supabase.</p>
+    <form id="loginForm" novalidate>
+      <label class="field"><span>E-mail</span><input id="email" name="email" type="email" autocomplete="username" required></label>
+      <label class="field"><span>Senha</span><input id="password" name="password" type="password" autocomplete="current-password" required minlength="8"></label>
+      <button class="button button-primary login-submit" id="submitButton" type="submit">Entrar</button>
+      <p class="form-message" id="formMessage" role="status" aria-live="polite"></p>
+    </form>
+    <div class="login-foot"><span>O player das TVs abre sem login.</span><a href="tv.html">Abrir player ↗</a></div>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="scripts/login.js"></script>
+</body>
+</html>

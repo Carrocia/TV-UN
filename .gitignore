@@ -1,0 +1,10 @@
+node_modules/
+uploads/
+site-state.json
+auth.json
+.env
+.env.*
+!.env.example
+npm-debug.log*
+.DS_Store
+Thumbs.db

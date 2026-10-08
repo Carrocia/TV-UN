@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700;800&display=swap');
+:root {
+  color-scheme: light;
+  --bg: #e8ecf4;
+  --surface: rgba(255, 255, 255, .92);
+  --surface-solid: #fff;
+  --surface-hover: #f5f6f8;
+  --border: rgba(20, 25, 40, .1);
+  --text: #2d3142;
+  --text-muted: #596070;
+  --heading-color: #1a1d27;
+  --accent: #007489;
+  --accent-rgb: 0, 116, 137;
+  --accent2: #6d4de6;
+  --accent2-rgb: 109, 77, 230;
+  --accent-glow: rgba(var(--accent-rgb), .15);
+  --accent-text: #fff;
+  --green: #059669;
+  --green-rgb: 5, 150, 105;
+  --gold: #ffc94d;
+  --gold-rgb: 255, 201, 77;
+  --danger: #ff5f6e;
+  --shadow-hover: rgba(0, 0, 0, .1);
+  --canvas: var(--bg);
+  --ink: var(--text);
+  --muted: var(--text-muted);
+  --subtle: #8d95a5;
+  --line: var(--border);
+  --forest: #182031;
+  --forest-deep: #121724;
+  --green-bright: #21a1b5;
+  --green-wash: rgba(var(--accent-rgb), .08);
+  --lime: #d8e7ff;
+  --shadow: 0 12px 32px rgba(18, 24, 38, .08);
+  --radius-card: 15px;
+  --font-body: 'Poppins', 'Segoe UI', sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Segoe UI', sans-serif;
+}
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #060810;
+  --surface: rgba(26, 29, 39, .76);
+  --surface-solid: #12141d;
+  --surface-hover: #222632;
+  --border: rgba(255, 255, 255, .09);
+  --text: #e4e6ed;
+  --text-muted: #8b90a0;
+  --heading-color: #fff;
+  --accent: #21d9ff;
+  --accent-rgb: 33, 217, 255;
+  --accent2: #7c5cff;
+  --accent2-rgb: 124, 92, 255;
+  --accent-glow: rgba(var(--accent-rgb), .25);
+  --accent-text: #000;
+  --green: #34d399;
+  --green-rgb: 52, 211, 153;
+  --gold: #ffc94d;
+  --gold-rgb: 255, 201, 77;
+  --danger: #ff5f6e;
+  --shadow-hover: rgba(0, 0, 0, .4);
+  --canvas: var(--bg);
+  --ink: var(--text);
+  --muted: var(--text-muted);
+  --subtle: #777e90;
+  --line: var(--border);
+  --forest: #141722;
+  --forest-deep: #0b0d16;
+  --green-bright: #21d9ff;
+  --green-wash: rgba(var(--accent-rgb), .09);
+  --lime: #d8ed95;
+  --shadow: 0 12px 32px rgba(0, 0, 0, .22);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 14px/1.5 var(--font-body); }
+button, input { font: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

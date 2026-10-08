@@ -1,0 +1,9 @@
+{
+  "name": "uni-central-de-telas",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Central de upload e sincronização de vídeos para TVs de filiais",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

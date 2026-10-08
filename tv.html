@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060810">
+  <title>Player de telas · Uni</title>
+  <link rel="stylesheet" href="styles/tv.css">
+  <link rel="stylesheet" href="styles/tv-brand.css">
+</head>
+<body>
+  <main class="tv-stage" id="stage" aria-live="polite">
+    <div class="tv-message"><span class="tv-brand"><img src="assets/images/uni-logo-dark.png" alt="UNI Internet"><i>·</i> central de telas</span><strong>Conectando à programação…</strong><span>Mantenha esta página aberta para receber a playlist sincronizada.</span></div>
+  </main>
+  <div class="tv-overlay" id="bar">
+    <div class="tv-overlay-top"><span class="tv-brand"><img src="assets/images/uni-logo-dark.png" alt="UNI Internet"><i>·</i> central de telas</span><span class="tv-status" id="status">Conectando…</span></div>
+    <div class="tv-overlay-bottom"><span id="title">Aguardando vídeo</span><span>F · Tela cheia</span></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script type="module" src="scripts/tv.js"></script>
+</body>
+</html>
