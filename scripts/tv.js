@@ -1,4 +1,4 @@
-import { api } from './api.js?v=instant-playback-20261008';
+import { api } from './api.js?v=fast-start-20261008';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');
@@ -78,11 +78,20 @@ function warmNextVideo(playbackState) {
   warmedVideo = document.createElement('video');
   warmedVideoId = next.id;
   warmedVideo.className = 'tv-video tv-preload';
-  warmedVideo.preload = 'auto';
+  warmedVideo.preload = 'metadata';
   warmedVideo.muted = true;
   warmedVideo.playsInline = true;
   warmedVideo.src = new URL(next.url, location.href).href;
   stage.append(warmedVideo);
+}
+
+function prioritizeNextVideo(currentVideo) {
+  if (!warmedVideo || currentVideo !== displayedVideo || !Number.isFinite(currentVideo.duration)) return;
+  const leadTime = Math.min(12, Math.max(4, currentVideo.duration * 0.25));
+  if (currentVideo.duration - currentVideo.currentTime <= leadTime && warmedVideo.preload !== 'auto') {
+    warmedVideo.preload = 'auto';
+    warmedVideo.load();
+  }
 }
 
 function render(nextState) {
@@ -131,8 +140,10 @@ function render(nextState) {
         outgoing.pause();
         outgoing.remove();
       }
+      if (state.action === 'play') warmNextVideo(state);
     };
     incoming.addEventListener('canplay', startVideo, { once: true });
+    incoming.addEventListener('timeupdate', () => prioritizeNextVideo(incoming));
     if (incoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) queueMicrotask(startVideo);
     incoming.addEventListener('ended', async () => {
       if (advancedVideos.has(incoming) || advancing) return;
@@ -178,8 +189,10 @@ function render(nextState) {
     });
     if (!incoming.isConnected) stage.append(incoming);
   }
-  if (!pendingVideo) alignPlayback(state);
-  warmNextVideo(state);
+  if (!pendingVideo) {
+    alignPlayback(state);
+    if (state.action === 'play') warmNextVideo(state);
+  }
 }
 
 async function connectPlayer() {
