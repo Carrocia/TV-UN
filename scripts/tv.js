@@ -125,14 +125,13 @@ function render(nextState) {
       }
       if (state) alignPlayback(state);
       requestAnimationFrame(() => {
-        incoming.classList.remove('tv-incoming');
         outgoing.classList.add(transition === 'fade' ? 'tv-outgoing-fade' : 'tv-outgoing-slide');
       });
       transitionTimer = setTimeout(() => {
         outgoing.pause();
         outgoing.remove();
-        incoming.classList.remove('tv-incoming-fade', 'tv-incoming-slide');
-      }, transition === 'fade' ? 850 : 700);
+        incoming.classList.remove('tv-incoming', 'tv-incoming-fade', 'tv-incoming-slide');
+      }, transition === 'fade' ? 850 : 1100);
     };
     incoming.addEventListener('canplay', beginTransition, { once: true });
     if (incoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) queueMicrotask(beginTransition);
