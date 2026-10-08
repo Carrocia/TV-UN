@@ -1,35 +1,27 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#060810">
-  <title>Central de telas · Uni</title>
-  <link rel="stylesheet" href="styles/tokens.css">
-  <link rel="stylesheet" href="styles/components.css">
-  <link rel="stylesheet" href="styles/dashboard.css">
-  <link rel="stylesheet" href="styles/dashboard-theme.css">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#060810">
+  <title>Painel · Uni</title>
+  <link rel="stylesheet" href="styles/tokens.css"><link rel="stylesheet" href="styles/components.css"><link rel="stylesheet" href="styles/dashboard.css"><link rel="stylesheet" href="styles/dashboard-theme.css">
 </head>
 <body data-theme="dark">
   <div class="bg-fx" aria-hidden="true"><span class="orb orb-1"></span><span class="orb orb-2"></span><span class="grid"></span></div>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Navegação principal">
-      <a class="brand" href="./" aria-label="Uni, central de telas">
-        <img class="brand-logo logo-dark" src="assets/images/uni-logo-dark.png" alt="UNI Internet">
-        <img class="brand-logo logo-light" src="assets/images/uni-logo-light.png" alt="UNI Internet">
-        <span class="brand-copy"><small>central de telas</small></span>
-      </a>
-      <p class="sidebar-label">GERENCIAMENTO</p>
-      <nav class="nav-list">
-        <a class="nav-link is-active" href="#painel"><span class="nav-icon">◫</span>Painel</a>
-        <a class="nav-link" href="#playlist"><span class="nav-icon">▤</span>Playlist</a>
-        <a class="nav-link" href="#conectar"><span class="nav-icon">⌖</span>Conectar TVs</a>
-      </nav>
-      <div class="sidebar-bottom">
-        <span class="server-indicator"><i></i> Central online</span>
-        <span class="sidebar-note">A programação é salva neste servidor.</span>
-      </div>
+      <a class="brand" href="index.html" aria-label="Uni, central de telas"><img class="brand-logo logo-dark" src="assets/images/uni-logo-dark.png" alt="UNI Internet"><img class="brand-logo logo-light" src="assets/images/uni-logo-light.png" alt="UNI Internet"><span class="brand-copy"><small>central de telas</small></span></a>
+      <p class="sidebar-label">GERENCIAMENTO</p><nav class="nav-list"><a class="nav-link is-active" href="index.html" aria-current="page"><span class="nav-icon">◫</span>Painel</a><a class="nav-link" href="playlist.html"><span class="nav-icon">▤</span>Playlist</a><a class="nav-link" href="connect.html"><span class="nav-icon">⌖</span>Conectar TVs</a></nav>
+      <div class="sidebar-bottom"><span class="server-indicator"><i></i> Central online</span><span class="sidebar-note">A programação é salva na nuvem.</span></div>
     </aside>
+<<<<<<< HEAD
+    <main class="main-content">
+      <header class="topbar"><div class="breadcrumb"><span>Uni</span><span class="slash">/</span><strong>Painel</strong></div><div class="topbar-actions"><a class="text-link" href="tv.html" target="_blank" rel="noreferrer">Abrir player de TV ↗</a><div class="theme-toggle" id="themeToggle" role="group" aria-label="Alternar tema"><button type="button" data-theme-choice="light" aria-label="Modo claro" aria-pressed="false">☼</button><button type="button" data-theme-choice="dark" aria-label="Modo escuro" aria-pressed="true">◐</button></div><span class="user-chip" aria-label="Sessão de administrador">U</span><button class="button button-quiet button-small" id="logoutBtn" type="button">Sair</button></div></header>
+      <div class="page-content">
+        <section class="page-heading"><div><p class="eyebrow">COMUNICAÇÃO NAS FILIAIS</p><h1>Uma programação para todas as telas.</h1><p class="page-intro">Escolha uma playlist e controle a reprodução em todas as TVs.</p></div><label class="playlist-picker">Playlist ativa<select id="playlistSelect" aria-label="Selecionar playlist"></select></label></section>
+        <section class="summary-grid" aria-label="Resumo da programação"><article class="summary-card"><span class="summary-icon icon-video">▷</span><div><span class="summary-label">Vídeos na playlist</span><strong id="videoCount">00</strong></div><span class="summary-caption" id="playlistNameCaption">Playlist</span></article><article class="summary-card"><span class="summary-icon icon-live">◉</span><div><span class="summary-label">Reprodução global</span><strong class="summary-state" id="playState">Aguardando</strong></div><span class="summary-caption" id="currentVideoShort">Nenhum vídeo selecionado</span></article><article class="summary-card"><span class="summary-icon icon-loop">↻</span><div><span class="summary-label">Modo da playlist</span><strong class="summary-state">Repetição</strong></div><span class="summary-caption">Avança ao terminar</span></article></section>
+        <section class="workspace-grid dashboard-only"><article class="panel player-panel" aria-labelledby="playerHeading"><div class="panel-header"><div><p class="section-kicker">AGORA NA PROGRAMAÇÃO</p><h2 id="playerHeading">Prévia da tela</h2></div><span class="live-pill" id="livePill"><i></i><span id="liveText">Aguardando</span></span></div><div class="screen-preview" id="screenPreview"><div class="preview-orbit orbit-one"></div><div class="preview-orbit orbit-two"></div><div class="preview-grain"></div><div class="preview-copy"><span class="preview-brand">UNI <span>·</span> COMUNICAÇÃO</span><h3 id="currentVideoTitle">Sua mensagem<br>em todas as telas.</h3><p id="previewDescription">Crie uma playlist para começar a transmitir.</p></div><div class="preview-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div><span class="screen-label">PLAYER SINCRONIZADO</span></div><div class="player-controls"><div class="now-playing"><span class="now-playing-dot"></span><div><strong id="currentVideoName">Playlist vazia</strong><small id="currentVideoMeta">Aguardando o primeiro vídeo</small></div></div><div class="control-actions"><button class="icon-button" id="pauseBtn" type="button" aria-label="Pausar todas as TVs" title="Pausar">Ⅱ</button><button class="icon-button icon-button-play" id="playBtn" type="button" aria-label="Iniciar todas as TVs" title="Iniciar">▶</button><a class="button button-dark" href="playlist.html">Gerenciar playlist</a></div></div></article></section>
+        <p class="upload-status" id="uploadStatus" role="status" aria-live="polite"></p>
+=======
 
     <main class="main-content">
       <header class="topbar">
@@ -94,10 +86,10 @@
           <p class="upload-status" id="uploadStatus" role="status" aria-live="polite"></p>
           <p class="format-note">Para melhor compatibilidade com TVs, prefira MP4 com H.264 e AAC.</p>
         </section>
+>>>>>>> ed74c20df62dc8744b015131348c076c5788da38
       </div>
     </main>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script type="module" src="scripts/dashboard.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script type="module" src="scripts/dashboard.js"></script>
 </body>
 </html>
