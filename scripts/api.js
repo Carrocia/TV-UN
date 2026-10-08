@@ -1,4 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase-config.js';
+import { R2_PUBLIC_URL, R2_UPLOAD_ENDPOINT } from './r2-config.js';
 
 const VIDEO_BUCKET = 'tv-videos';
 let client;
@@ -9,7 +10,74 @@ function getClient() {
   return client;
 }
 function unwrap(result) { if (result.error) throw result.error; return result.data; }
-function mapVideo(row) { return { id: row.id, name: row.name, url: getClient().storage.from(VIDEO_BUCKET).getPublicUrl(row.storage_path).data.publicUrl, type: row.mime_type, uploadedAt: Date.parse(row.created_at) }; }
+function mapVideo(row) {
+  const storagePath = row.storage_path || '';
+  const isR2 = storagePath.startsWith('r2:');
+  const url = isR2
+    ? `${R2_PUBLIC_URL.replace(/\/$/, '')}/${storagePath.slice(3).split('/').map(encodeURIComponent).join('/')}`
+    : getClient().storage.from(VIDEO_BUCKET).getPublicUrl(storagePath).data.publicUrl;
+  return { id: row.id, name: row.name, url, type: row.mime_type, uploadedAt: Date.parse(row.created_at) };
+}
+
+async function uploadToR2(file, key, contentType, onProgress = () => {}) {
+  if (!R2_UPLOAD_ENDPOINT) throw new Error('O endpoint do Worker do R2 ainda não foi configurado.');
+  const { session } = unwrap(await getClient().auth.getSession());
+  if (!session?.access_token) throw new Error('Sua sessão expirou. Entre novamente para enviar o vídeo.');
+  const endpoint = R2_UPLOAD_ENDPOINT.replace(/\/$/, '');
+  const headers = { Authorization: `Bearer ${session.access_token}` };
+  const call = async (path, options = {}) => {
+    const response = await fetch(`${endpoint}${path}`, { ...options, headers: { ...headers, ...options.headers } });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Falha no upload do R2 (${response.status}).`);
+    return result;
+  };
+
+  let uploadId;
+  try {
+    ({ uploadId } = await call('/initiate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, contentType })
+    }));
+    if (!uploadId) throw new Error('O Worker não iniciou o envio multipart.');
+
+    const partSize = 16 * 1024 * 1024;
+    const partCount = Math.ceil(file.size / partSize);
+    const parts = [];
+    for (let index = 0; index < partCount; index += 1) {
+      const partNumber = index + 1;
+      const body = file.slice(index * partSize, Math.min((index + 1) * partSize, file.size));
+      const part = await call(`/part?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}&partNumber=${partNumber}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body
+      });
+      parts.push(part);
+      onProgress(Math.min(1, ((index + 1) * partSize) / file.size));
+    }
+    await call(`/complete?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ parts })
+    });
+    uploadId = null;
+  } catch (error) {
+    if (uploadId) {
+      await call(`/abort?key=${encodeURIComponent(key)}&uploadId=${encodeURIComponent(uploadId)}`, { method: 'POST' }).catch(() => {});
+    }
+    throw error;
+  }
+}
+
+async function deleteR2Object(key) {
+  const { session } = unwrap(await getClient().auth.getSession());
+  if (!session?.access_token || !R2_UPLOAD_ENDPOINT) return;
+  const endpoint = R2_UPLOAD_ENDPOINT.replace(/\/$/, '');
+  const response = await fetch(`${endpoint}/delete?key=${encodeURIComponent(key)}`, {
+    method: 'DELETE', headers: { Authorization: `Bearer ${session.access_token}` }
+  });
+  if (!response.ok) throw new Error('Não foi possível remover o vídeo do R2.');
+}
 
 async function getPlaylists() {
   const supabase = getClient();
@@ -100,12 +168,18 @@ export const api = {
   async createPlaylist(name) { return unwrap(await getClient().from('playlists').insert({ name: name.trim() }).select().single()); },
   async renamePlaylist(id, name) { unwrap(await getClient().from('playlists').update({ name: name.trim() }).eq('id', id)); },
   async deletePlaylist(id) { unwrap(await getClient().from('playlists').delete().eq('id', id)); return fetchState(); },
-  async uploadVideo(file, playlistId) {
+  async uploadVideo(file, playlistId, onProgress = () => {}) {
     const supabase = getClient();
     const extension = file.name.match(/\.[a-z0-9]+$/i)?.[0]?.toLowerCase() || '.mp4';
-    const storagePath = `${crypto.randomUUID()}${extension}`;
+    const key = `videos/${crypto.randomUUID()}${extension}`;
+    const useR2 = Boolean(R2_UPLOAD_ENDPOINT);
+    const storagePath = useR2 ? `r2:${key}` : key.slice('videos/'.length);
     const mimeType = file.type || 'video/mp4';
-    unwrap(await supabase.storage.from(VIDEO_BUCKET).upload(storagePath, file, { contentType: mimeType, upsert: false }));
+    if (useR2) await uploadToR2(file, key, mimeType, onProgress);
+    else {
+      if (file.size > 50 * 1024 * 1024) throw new Error('Este vídeo passa do limite atual do Supabase. Configure o Worker do R2 para enviar arquivos grandes.');
+      unwrap(await supabase.storage.from(VIDEO_BUCKET).upload(storagePath, file, { contentType: mimeType, upsert: false }));
+    }
     let video;
     try {
       video = unwrap(await supabase.from('videos').insert({ name: file.name, storage_path: storagePath, mime_type: mimeType, size_bytes: file.size, sort_order: 0 }).select().single());
@@ -116,7 +190,8 @@ export const api = {
       return video;
     } catch (error) {
       if (video?.id) await supabase.from('videos').delete().eq('id', video.id);
-      await supabase.storage.from(VIDEO_BUCKET).remove([storagePath]);
+      if (useR2) await deleteR2Object(key).catch(() => {});
+      else await supabase.storage.from(VIDEO_BUCKET).remove([storagePath]);
       throw error;
     }
   },

@@ -1,0 +1,109 @@
+const ALLOWED_ORIGIN = 'https://carrocia.github.io';
+const KEY_PATTERN = /^videos\/[a-f0-9-]{36}\.(mp4|m4v|mov|webm|ogv|ogg)$/i;
+const MAX_PART_BYTES = 90 * 1024 * 1024;
+
+function response(request, body, status = 200) {
+  const headers = new Headers({
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store'
+  });
+  if (request.headers.get('Origin') === ALLOWED_ORIGIN) {
+    headers.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
+    headers.set('Vary', 'Origin');
+    headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    headers.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+    headers.set('Access-Control-Max-Age', '86400');
+  }
+  return new Response(body === null ? null : JSON.stringify(body), { status, headers });
+}
+
+function validKey(key) {
+  return typeof key === 'string' && KEY_PATTERN.test(key);
+}
+
+async function requireUser(request, env) {
+  const authorization = request.headers.get('Authorization');
+  if (!authorization?.startsWith('Bearer ')) return false;
+  const result = await fetch(`${env.SUPABASE_URL.replace(/\/$/, '')}/auth/v1/user`, {
+    headers: { apikey: env.SUPABASE_ANON_KEY, Authorization: authorization }
+  });
+  return result.ok;
+}
+
+export default {
+  async fetch(request, env) {
+    const origin = request.headers.get('Origin');
+    if (request.method === 'OPTIONS') {
+      if (origin !== ALLOWED_ORIGIN) return response(request, { error: 'Origem não permitida.' }, 403);
+      return response(request, null, 204);
+    }
+    if (origin !== ALLOWED_ORIGIN) return response(request, { error: 'Origem não permitida.' }, 403);
+    if (!env.TV_VIDEOS || !env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+      return response(request, { error: 'Configure o bucket e as variáveis do Worker.' }, 503);
+    }
+
+    try {
+      if (!(await requireUser(request, env))) return response(request, { error: 'Entre na central novamente para enviar vídeos.' }, 401);
+      const url = new URL(request.url);
+      const key = url.searchParams.get('key');
+      const uploadId = url.searchParams.get('uploadId');
+      const action = url.pathname.replace(/^\/+|\/+$/g, '');
+
+      if (action === 'initiate' && request.method === 'POST') {
+        const body = await request.json();
+        if (!validKey(body.key) || typeof body.contentType !== 'string' || !body.contentType.startsWith('video/')) {
+          return response(request, { error: 'Arquivo de vídeo inválido.' }, 400);
+        }
+        const upload = await env.TV_VIDEOS.createMultipartUpload(body.key, {
+          httpMetadata: { contentType: body.contentType }
+        });
+        return response(request, { key: upload.key, uploadId: upload.uploadId });
+      }
+
+      if (!validKey(key)) {
+        return response(request, { error: 'Identificação do arquivo inválida.' }, 400);
+      }
+      if (action === 'delete' && request.method === 'DELETE') {
+        await env.TV_VIDEOS.delete(key);
+        return response(request, { ok: true });
+      }
+      if (typeof uploadId !== 'string' || uploadId.length > 200) {
+        return response(request, { error: 'Identificação do upload inválida.' }, 400);
+      }
+      const upload = env.TV_VIDEOS.resumeMultipartUpload(key, uploadId);
+
+      if (action === 'part' && request.method === 'PUT') {
+        const partNumber = Number(url.searchParams.get('partNumber'));
+        const contentLength = Number(request.headers.get('Content-Length') || 0);
+        if (!Number.isInteger(partNumber) || partNumber < 1 || partNumber > 10000 || !request.body || contentLength > MAX_PART_BYTES) {
+          return response(request, { error: 'Parte do arquivo inválida ou grande demais.' }, 400);
+        }
+        const part = await upload.uploadPart(partNumber, request.body);
+        return response(request, part);
+      }
+
+      if (action === 'complete' && request.method === 'POST') {
+        const body = await request.json();
+        if (!Array.isArray(body.parts) || body.parts.length === 0 || body.parts.length > 10000) {
+          return response(request, { error: 'Lista de partes inválida.' }, 400);
+        }
+        const parts = body.parts.map(part => ({ partNumber: Number(part.partNumber), etag: String(part.etag || '') }));
+        if (parts.some(part => !Number.isInteger(part.partNumber) || part.partNumber < 1 || !part.etag)) {
+          return response(request, { error: 'Uma parte do arquivo está inválida.' }, 400);
+        }
+        const object = await upload.complete(parts);
+        return response(request, { key: object.key, size: object.size, etag: object.httpEtag });
+      }
+
+      if (action === 'abort' && request.method === 'POST') {
+        await upload.abort();
+        return response(request, { ok: true });
+      }
+
+      return response(request, { error: 'Ação não encontrada.' }, 404);
+    } catch (error) {
+      console.error('Falha no upload R2:', error);
+      return response(request, { error: 'O R2 não conseguiu concluir esta operação. Tente novamente.' }, 500);
+    }
+  }
+};
