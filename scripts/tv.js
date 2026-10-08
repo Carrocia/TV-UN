@@ -1,4 +1,4 @@
-import { api } from './api.js?v=playlists-20261007';
+import { api } from './api.js?v=tv-advance-20261008';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');
@@ -8,6 +8,7 @@ let state = null;
 let activeVideoId = null;
 let videoElement = null;
 let hideTimer;
+let advancing = false;
 
 function showOverlay() {
   bar.classList.add('visible');
@@ -66,7 +67,19 @@ function render(nextState) {
     videoElement.preload = 'auto';
     videoElement.src = new URL(current.url, location.href).href;
     videoElement.addEventListener('loadedmetadata', () => alignPlayback(state));
-    videoElement.addEventListener('ended', () => api.advanceFromTv(state.current).catch(() => {}));
+    videoElement.addEventListener('ended', async () => {
+      if (advancing) return;
+      advancing = true;
+      try {
+        render(await api.advanceFromTv(state.current));
+      } catch (error) {
+        console.error('Falha ao avançar a playlist:', error);
+        setStatus('Falha ao avançar a playlist', 'error');
+        showOverlay();
+      } finally {
+        advancing = false;
+      }
+    });
     videoElement.addEventListener('error', () => {
       setStatus('Formato não compatível com esta TV', 'error');
       showOverlay();

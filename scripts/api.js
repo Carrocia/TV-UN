@@ -45,7 +45,14 @@ export const api = {
   async logout() { unwrap(await getClient().auth.signOut()); },
   getState: fetchState,
   sendCommand(command) { return savePlayback({ playlistId: command.playlistId, current: Number.isInteger(command.current) ? command.current : 0, action: command.action || 'play', position: command.position || 0 }); },
-  async advanceFromTv(expectedCurrent) { const state = await fetchState(); if (!state.videos.length || state.current !== expectedCurrent) return state; return savePlayback({ playlistId: state.playlistId, current: (state.current + 1) % state.videos.length, action: 'play', position: 0 }); },
+  async advanceFromTv(expectedCurrent) {
+    const state = await fetchState();
+    if (!state.videos.length || state.current !== expectedCurrent) return state;
+    const currentVideo = state.videos[state.current];
+    if (!currentVideo) return state;
+    unwrap(await getClient().rpc('advance_tv_playback', { expected_current_video_id: currentVideo.id }));
+    return fetchState();
+  },
   async createPlaylist(name) { return unwrap(await getClient().from('playlists').insert({ name: name.trim() }).select().single()); },
   async renamePlaylist(id, name) { unwrap(await getClient().from('playlists').update({ name: name.trim() }).eq('id', id)); },
   async deletePlaylist(id) { unwrap(await getClient().from('playlists').delete().eq('id', id)); return fetchState(); },

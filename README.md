@@ -9,6 +9,7 @@ Painel web para organizar vídeos e sincronizar a reprodução nas TVs das filia
 3. No Supabase, crie o usuário administrador em **Authentication → Users → Add user**. O painel entra com e-mail e senha do Supabase Auth.
 4. Publique os arquivos do site em hospedagem HTTPS, como GitHub Pages. O painel usa Supabase Auth; o player `tv.html` abre sem login.
 5. Para atualizar uma instalação que já usa as tabelas antigas, execute uma vez o arquivo `supabase-playlists-migration.sql` no SQL Editor do Supabase. Ele cria playlists e itens e migra os vídeos atuais para “Playlist padrão”.
+6. Execute também uma vez o arquivo `supabase-tv-auto-advance.sql` no SQL Editor. Ele autoriza apenas a função de avançar o vídeo atual para o player da TV sem login; não libera edição geral do estado de reprodução para visitantes.
 
 O bucket `tv-videos` é público para permitir que as TVs carreguem os vídeos diretamente. Não envie conteúdo confidencial. O painel seleciona a playlist a transmitir; a página `playlist.html` cria e organiza playlists, recebe upload e configura a transição de cada vídeo. Alterações em `playlists`, `playlist_items` e `playback_state` são recebidas em tempo real pelo Supabase Realtime.
 
