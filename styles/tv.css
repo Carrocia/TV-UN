@@ -10,12 +10,13 @@
 
 * { box-sizing: border-box; }
 html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: var(--tv-bg); color: var(--tv-ink); font: 16px 'Plus Jakarta Sans', 'Segoe UI', Arial, sans-serif; }
-.tv-stage { width: 100%; height: 100%; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #111624, var(--tv-bg) 70%); }
-.tv-video { width: 100%; height: 100%; object-fit: contain; background: #000; }
-.tv-enter-fade { animation: tv-fade-in .8s ease both; }
-.tv-enter-slide { animation: tv-slide-in .65s ease both; }
-@keyframes tv-fade-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes tv-slide-in { from { opacity: .5; transform: translateX(3%); } to { opacity: 1; transform: translateX(0); } }
+.tv-stage { position: relative; width: 100%; height: 100%; overflow: hidden; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, #111624, var(--tv-bg) 70%); }
+.tv-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+.tv-incoming { z-index: 1; transition: opacity .8s ease, transform .65s ease; }
+.tv-incoming-fade { opacity: 0; }
+.tv-incoming-slide { opacity: 0; transform: translateX(100%); }
+.tv-outgoing-fade { opacity: 0; transition: opacity .8s ease; }
+.tv-outgoing-slide { opacity: 0; transform: translateX(-100%); transition: opacity .65s ease, transform .65s ease; }
 .tv-message { max-width: 560px; padding: 30px; text-align: center; color: var(--tv-muted); line-height: 1.6; }
 .tv-message strong { display: block; margin: 20px 0 8px; color: var(--tv-ink); font-size: clamp(22px, 4vw, 40px); letter-spacing: -.6px; }
 .tv-message > span:last-child { font-size: 13px; }
@@ -28,4 +29,4 @@ html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background:
 .tv-status.paused::before { background: #ffc94d; box-shadow: none; }
 .tv-status.error::before { background: #ff5f6e; box-shadow: none; }
 @media (max-width: 600px) { .tv-overlay { padding: 25px 16px 14px; } .tv-overlay-top { font-size: 10px; } .tv-overlay-bottom { font-size: 9px; } }
-@media (prefers-reduced-motion: reduce) { .tv-overlay, .tv-video { transition: none; animation: none; } }
+@media (prefers-reduced-motion: reduce) { .tv-overlay, .tv-video { transition: none; animation: none; } .tv-incoming { opacity: 1; transform: none; } }

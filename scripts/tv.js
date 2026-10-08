@@ -1,4 +1,4 @@
-import { api } from './api.js?v=tv-devices-20261008';
+import { api } from './api.js?v=tv-transition-20261008';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');
@@ -13,8 +13,12 @@ try {
 let state = null;
 let activeVideoId = null;
 let videoElement = null;
+let displayedVideo = null;
+let pendingVideo = null;
+let transitionTimer;
 let hideTimer;
 let advancing = false;
+const advancedVideos = new WeakSet();
 
 function showOverlay() {
   bar.classList.add('visible');
@@ -29,7 +33,10 @@ function setStatus(message, mode = 'playing') {
 }
 
 function showEmpty(message) {
+  clearTimeout(transitionTimer);
+  pendingVideo = null;
   videoElement = null;
+  displayedVideo = null;
   activeVideoId = null;
   stage.innerHTML = `<div class="tv-message"><span class="tv-brand"><img src="assets/images/uni-logo-dark.png" alt="UNI Internet"><i>·</i> central de telas</span><strong>${message}</strong><span>A central atualizará esta tela assim que houver programação.</span></div>`;
   title.textContent = 'Aguardando programação';
@@ -63,17 +70,50 @@ function render(nextState) {
   setStatus(state.action === 'play' ? 'Conectando vídeo…' : 'Pausado', state.action === 'play' ? 'playing' : 'paused');
   if (current.id !== activeVideoId) {
     const transition = current.transition || 'none';
+    clearTimeout(transitionTimer);
+    if (pendingVideo && pendingVideo !== videoElement) pendingVideo.remove();
+    const outgoing = displayedVideo?.isConnected ? displayedVideo : null;
+    stage.querySelectorAll('.tv-video').forEach(video => {
+      if (video !== outgoing) video.remove();
+    });
+    if (outgoing) advancedVideos.add(outgoing);
     activeVideoId = current.id;
-    videoElement = document.createElement('video');
-    videoElement.className = 'tv-video';
-    if (transition === 'fade') videoElement.classList.add('tv-enter-fade');
-    if (transition === 'slide') videoElement.classList.add('tv-enter-slide');
-    videoElement.playsInline = true;
-    videoElement.autoplay = true;
-    videoElement.preload = 'auto';
-    videoElement.src = new URL(current.url, location.href).href;
-    videoElement.addEventListener('loadedmetadata', () => alignPlayback(state));
-    videoElement.addEventListener('ended', async () => {
+    const incoming = document.createElement('video');
+    pendingVideo = incoming;
+    videoElement = incoming;
+    incoming.className = `tv-video${transition === 'fade' ? ' tv-incoming tv-incoming-fade' : transition === 'slide' ? ' tv-incoming tv-incoming-slide' : ''}`;
+    incoming.playsInline = true;
+    incoming.autoplay = true;
+    incoming.preload = 'auto';
+    incoming.src = new URL(current.url, location.href).href;
+    incoming.addEventListener('loadedmetadata', () => {
+      if (incoming === videoElement && state) alignPlayback(state);
+    });
+    incoming.addEventListener('canplay', () => {
+      if (incoming !== pendingVideo || incoming !== videoElement) return;
+      pendingVideo = null;
+      if (!incoming.isConnected) stage.append(incoming);
+      displayedVideo = incoming;
+      if (!outgoing || transition === 'none' || !outgoing.isConnected) {
+        outgoing?.remove();
+        incoming.classList.remove('tv-incoming', 'tv-incoming-fade', 'tv-incoming-slide');
+        if (state) alignPlayback(state);
+        return;
+      }
+      if (state) alignPlayback(state);
+      requestAnimationFrame(() => {
+        incoming.classList.remove('tv-incoming');
+        outgoing.classList.add(transition === 'fade' ? 'tv-outgoing-fade' : 'tv-outgoing-slide');
+      });
+      transitionTimer = setTimeout(() => {
+        outgoing.pause();
+        outgoing.remove();
+        incoming.classList.remove('tv-incoming-fade', 'tv-incoming-slide');
+      }, transition === 'fade' ? 850 : 700);
+    }, { once: true });
+    incoming.addEventListener('ended', async () => {
+      if (advancedVideos.has(incoming) || advancing) return;
+      advancedVideos.add(incoming);
       if (advancing) return;
       advancing = true;
       try {
@@ -86,13 +126,20 @@ function render(nextState) {
         advancing = false;
       }
     });
-    videoElement.addEventListener('error', () => {
+    incoming.addEventListener('error', () => {
+      if (incoming !== videoElement) return;
+      pendingVideo = null;
+      if (outgoing?.isConnected) {
+        videoElement = outgoing;
+        displayedVideo = outgoing;
+        activeVideoId = null;
+      }
       setStatus('Formato não compatível com esta TV', 'error');
       showOverlay();
     });
-    stage.replaceChildren(videoElement);
+    stage.append(incoming);
   }
-  alignPlayback(state);
+  if (!pendingVideo) alignPlayback(state);
 }
 
 async function connectPlayer() {
