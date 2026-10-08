@@ -127,7 +127,13 @@ export const api = {
     for (const [index, id] of orderedIds.entries()) unwrap(await supabase.from('playlist_items').update({ sort_order: index }).eq('id', id).eq('playlist_id', playlistId));
   },
   subscribe(onState, onConnectionChange = () => {}, deviceId = null) {
-    const refreshState = () => fetchState(deviceId).then(onState).catch(() => {});
+    let refreshVersion = 0;
+    const refreshState = () => {
+      const version = ++refreshVersion;
+      return fetchState(deviceId)
+        .then(state => { if (version === refreshVersion) onState(state); })
+        .catch(() => {});
+    };
     const channel = getClient().channel('tv-uni-playback')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'videos' }, refreshState)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'playlists' }, refreshState)

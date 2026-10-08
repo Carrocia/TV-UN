@@ -1,4 +1,4 @@
-import { api } from './api.js?v=tv-transition-20261008';
+import { api } from './api.js?v=stable-transition-20261008';
 
 const stage = document.querySelector('#stage');
 const bar = document.querySelector('#bar');
@@ -17,6 +17,7 @@ let displayedVideo = null;
 let pendingVideo = null;
 let warmedVideo = null;
 let warmedVideoId = null;
+let pendingTransition = null;
 let transitionTimer;
 let hideTimer;
 let advancing = false;
@@ -36,7 +37,11 @@ function setStatus(message, mode = 'playing') {
 
 function showEmpty(message) {
   clearTimeout(transitionTimer);
+  stage.querySelectorAll('video').forEach(video => { video.pause(); video.remove(); });
   pendingVideo = null;
+  pendingTransition = null;
+  warmedVideo = null;
+  warmedVideoId = null;
   videoElement = null;
   displayedVideo = null;
   activeVideoId = null;
@@ -46,20 +51,25 @@ function showEmpty(message) {
 }
 
 function alignPlayback(nextState) {
-  if (!videoElement || !Number.isFinite(videoElement.duration)) return;
+  if (!videoElement || !Number.isFinite(videoElement.duration)) return Promise.resolve(false);
   const elapsed = nextState.action === 'play' ? Math.max(0, (Date.now() - nextState.changedAt) / 1000) : 0;
   const target = Math.min(nextState.position + elapsed, Math.max(0, videoElement.duration - 0.25));
   if (Math.abs(videoElement.currentTime - target) > 1.3) {
     try { videoElement.currentTime = target; } catch { /* The media is not seekable yet. */ }
   }
   if (nextState.action === 'play') {
-    videoElement.play().then(() => setStatus('Reproduzindo')).catch(() => {
+    return videoElement.play().then(() => {
+      setStatus('Reproduzindo');
+      return true;
+    }).catch(() => {
       setStatus('Interaja com a tela para iniciar o áudio', 'error');
       showOverlay();
+      return false;
     });
   } else {
     videoElement.pause();
     setStatus('Pausado', 'paused');
+    return Promise.resolve(true);
   }
 }
 
@@ -89,6 +99,7 @@ function render(nextState) {
   if (current.id !== activeVideoId) {
     const transition = current.transition || 'none';
     clearTimeout(transitionTimer);
+    pendingTransition = null;
     if (pendingVideo && pendingVideo !== videoElement) pendingVideo.remove();
     const outgoing = displayedVideo?.isConnected ? displayedVideo : null;
     const incoming = warmedVideoId === current.id ? warmedVideo : document.createElement('video');
@@ -112,18 +123,24 @@ function render(nextState) {
     incoming.addEventListener('loadedmetadata', () => {
       if (incoming === videoElement && state) alignPlayback(state);
     });
-    const beginTransition = () => {
-      if (incoming !== pendingVideo || incoming !== videoElement) return;
+    let transitionStarting = false;
+    let transitionStarted = false;
+    const beginTransition = async () => {
+      if (incoming !== pendingVideo || incoming !== videoElement || transitionStarting || transitionStarted) return;
+      transitionStarting = true;
+      const canPlay = await alignPlayback(state);
+      transitionStarting = false;
+      if (!canPlay || incoming !== pendingVideo || incoming !== videoElement) return;
+      transitionStarted = true;
+      pendingTransition = null;
       pendingVideo = null;
       if (!incoming.isConnected) stage.append(incoming);
       displayedVideo = incoming;
       if (!outgoing || transition === 'none' || !outgoing.isConnected) {
         outgoing?.remove();
         incoming.classList.remove('tv-incoming', 'tv-incoming-fade', 'tv-incoming-slide');
-        if (state) alignPlayback(state);
         return;
       }
-      if (state) alignPlayback(state);
       requestAnimationFrame(() => {
         incoming.classList.remove(transition === 'fade' ? 'tv-incoming-fade' : 'tv-incoming-slide');
         outgoing.classList.add(transition === 'fade' ? 'tv-outgoing-fade' : 'tv-outgoing-slide');
@@ -134,6 +151,7 @@ function render(nextState) {
         incoming.classList.remove('tv-incoming');
       }, transition === 'fade' ? 850 : 1100);
     };
+    pendingTransition = beginTransition;
     incoming.addEventListener('canplay', beginTransition, { once: true });
     if (incoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) queueMicrotask(beginTransition);
     incoming.addEventListener('ended', async () => {
@@ -156,6 +174,7 @@ function render(nextState) {
     incoming.addEventListener('error', () => {
       if (incoming !== videoElement) return;
       pendingVideo = null;
+      pendingTransition = null;
       if (outgoing?.isConnected) {
         videoElement = outgoing;
         displayedVideo = outgoing;
@@ -187,7 +206,12 @@ async function connectPlayer() {
 }
 connectPlayer();
 document.addEventListener('mousemove', showOverlay);
-document.addEventListener('click', () => { if (videoElement && state?.action === 'play') videoElement.play().catch(() => {}); showOverlay(); });
+document.addEventListener('click', () => {
+  if (videoElement && state?.action === 'play') {
+    videoElement.play().then(() => pendingTransition?.()).catch(() => {});
+  }
+  showOverlay();
+});
 document.addEventListener('keydown', event => {
   if (event.key.toLowerCase() === 'f') {
     if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
