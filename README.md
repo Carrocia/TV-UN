@@ -18,10 +18,10 @@ O bucket `tv-videos` é público para permitir que as TVs carreguem os vídeos d
 
 O projeto pode continuar usando o Supabase para login e playlists e usar o R2 para arquivos grandes. Para ativar o upload pelo painel:
 
-1. No Cloudflare, crie um Worker e publique o conteúdo de `cloudflare/r2-upload-worker.js`.
-2. Adicione ao Worker um binding de R2 com o nome `TV_VIDEOS`, apontando para o bucket `tv-uni-videos`.
-3. Configure as variáveis `SUPABASE_URL` e `SUPABASE_ANON_KEY` com os valores de `scripts/supabase-config.js`. A chave publishable/anon é pública; nunca use uma chave `service_role` ou secret.
-4. Copie a URL `workers.dev` do Worker para `R2_UPLOAD_ENDPOINT` em `scripts/r2-config.js`.
+1. No Cloudflare, abra **Workers & Pages → Create → Worker**, crie um Worker e substitua o código inicial pelo conteúdo de `cloudflare/r2-upload-worker.js`; depois publique em **Deploy**.
+2. Em **Settings → Bindings → Add → R2 bucket**, use o nome de variável `TV_VIDEOS` e selecione o bucket `tv-uni-videos`. Salve e faça novo deploy se o painel solicitar.
+3. Em **Settings → Variables and Secrets**, adicione `SUPABASE_URL` e `SUPABASE_ANON_KEY` com os valores de `scripts/supabase-config.js`. A chave publishable/anon pode ser usada aqui; nunca use uma chave `service_role` ou secret.
+4. Copie a URL `workers.dev` do Worker para `R2_UPLOAD_ENDPOINT` em `scripts/r2-config.js` e publique essa alteração do site no GitHub Pages.
 5. `R2_PUBLIC_URL` já contém o endereço público de desenvolvimento do bucket. Ele é adequado para o teste; a Cloudflare recomenda domínio próprio para produção.
 
 O Worker valida a sessão autenticada no Supabase e transfere vídeos em partes de 16 MiB para não exceder o limite de corpo de uma requisição. Vídeos antigos no Supabase continuam reproduzindo; novos envios usam o R2 quando `R2_UPLOAD_ENDPOINT` estiver configurado.

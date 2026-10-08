@@ -22,7 +22,7 @@ function render(next = state) {
     row.innerHTML = `<span class="drag-handle" aria-label="Arrastar para ordenar">⠿</span><span class="video-thumb">▷</span><span class="editor-video-info"><strong class="video-name">${safeName}</strong><small class="video-subtitle">Vídeo ${String(index + 1).padStart(2, '0')}</small></span><button class="video-action" type="button" data-remove="${video.itemId}" aria-label="Remover ${safeName}" title="Remover vídeo">×</button>`;
     list.appendChild(row);
   });
-  list.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', async () => { if (!confirm('Remover este vídeo desta playlist? O arquivo continuará na biblioteca do Supabase.')) return; try { await api.removeItem(button.dataset.remove); render(await api.getState()); } catch (error) { showError(error); } }));
+  list.querySelectorAll('[data-remove]').forEach(button => button.addEventListener('click', async () => { if (!confirm('Remover este vídeo desta playlist? O arquivo continuará armazenado.')) return; try { await api.removeItem(button.dataset.remove); render(await api.getState()); } catch (error) { showError(error); } }));
   list.querySelectorAll('.editor-row').forEach(row => {
     row.addEventListener('dragstart', event => { dragging = row.dataset.itemId; row.classList.add('is-dragging'); event.dataTransfer.effectAllowed = 'move'; });
     row.addEventListener('dragend', () => { dragging = null; row.classList.remove('is-dragging'); });
