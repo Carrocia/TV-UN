@@ -19,6 +19,33 @@ document.querySelectorAll('[data-theme-choice]').forEach(button => button.addEve
   setTheme(button.dataset.themeChoice);
 }));
 
+const navLinks = [...document.querySelectorAll('.nav-link[href^="#"]')];
+const navSections = navLinks.map(link => document.querySelector(link.getAttribute('href'))).filter(Boolean);
+function setActiveSection(id) {
+  navLinks.forEach(link => {
+    const active = link.hash === `#${id}`;
+    link.classList.toggle('is-active', active);
+    if (active) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  });
+}
+navLinks.forEach(link => link.addEventListener('click', () => setActiveSection(link.hash.slice(1))));
+window.addEventListener('hashchange', () => setActiveSection(location.hash.slice(1) || 'painel'));
+function updateActiveSectionFromScroll() {
+  if (!navSections.length) return;
+  const atPageEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+  if (atPageEnd) { setActiveSection(navSections.at(-1).id); return; }
+  const activationLine = window.scrollY + Math.min(144, window.innerHeight * 0.2);
+  const current = navSections.filter(section => section.getBoundingClientRect().top + window.scrollY <= activationLine).at(-1);
+  setActiveSection((current || navSections[0]).id);
+}
+let scrollFrame = 0;
+window.addEventListener('scroll', () => {
+  cancelAnimationFrame(scrollFrame);
+  scrollFrame = requestAnimationFrame(updateActiveSectionFromScroll);
+}, { passive: true });
+setActiveSection(location.hash.slice(1) || 'painel');
+
 function escapeHtml(value = '') {
   return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 }
