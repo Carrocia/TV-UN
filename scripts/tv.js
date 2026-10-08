@@ -15,6 +15,8 @@ let activeVideoId = null;
 let videoElement = null;
 let displayedVideo = null;
 let pendingVideo = null;
+let warmedVideo = null;
+let warmedVideoId = null;
 let transitionTimer;
 let hideTimer;
 let advancing = false;
@@ -61,6 +63,22 @@ function alignPlayback(nextState) {
   }
 }
 
+function warmNextVideo(playbackState) {
+  const videos = playbackState.videos || [];
+  if (videos.length < 2) return;
+  const next = videos[(playbackState.current + 1) % videos.length];
+  if (warmedVideoId === next.id) return;
+  warmedVideo?.remove();
+  warmedVideo = document.createElement('video');
+  warmedVideoId = next.id;
+  warmedVideo.className = 'tv-video tv-preload';
+  warmedVideo.preload = 'auto';
+  warmedVideo.muted = true;
+  warmedVideo.playsInline = true;
+  warmedVideo.src = new URL(next.url, location.href).href;
+  stage.append(warmedVideo);
+}
+
 function render(nextState) {
   state = nextState;
   const current = state.videos?.[state.current];
@@ -73,23 +91,28 @@ function render(nextState) {
     clearTimeout(transitionTimer);
     if (pendingVideo && pendingVideo !== videoElement) pendingVideo.remove();
     const outgoing = displayedVideo?.isConnected ? displayedVideo : null;
+    const incoming = warmedVideoId === current.id ? warmedVideo : document.createElement('video');
+    warmedVideo = null;
+    warmedVideoId = null;
     stage.querySelectorAll('.tv-video').forEach(video => {
-      if (video !== outgoing) video.remove();
+      if (video !== outgoing && video !== incoming) video.remove();
     });
     if (outgoing) advancedVideos.add(outgoing);
     activeVideoId = current.id;
-    const incoming = document.createElement('video');
     pendingVideo = incoming;
     videoElement = incoming;
     incoming.className = `tv-video${transition === 'fade' ? ' tv-incoming tv-incoming-fade' : transition === 'slide' ? ' tv-incoming tv-incoming-slide' : ''}`;
+    incoming.muted = false;
     incoming.playsInline = true;
     incoming.autoplay = true;
     incoming.preload = 'auto';
-    incoming.src = new URL(current.url, location.href).href;
+    if (!incoming.src || incoming.src !== new URL(current.url, location.href).href) {
+      incoming.src = new URL(current.url, location.href).href;
+    }
     incoming.addEventListener('loadedmetadata', () => {
       if (incoming === videoElement && state) alignPlayback(state);
     });
-    incoming.addEventListener('canplay', () => {
+    const beginTransition = () => {
       if (incoming !== pendingVideo || incoming !== videoElement) return;
       pendingVideo = null;
       if (!incoming.isConnected) stage.append(incoming);
@@ -110,18 +133,22 @@ function render(nextState) {
         outgoing.remove();
         incoming.classList.remove('tv-incoming-fade', 'tv-incoming-slide');
       }, transition === 'fade' ? 850 : 700);
-    }, { once: true });
+    };
+    incoming.addEventListener('canplay', beginTransition, { once: true });
+    if (incoming.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) queueMicrotask(beginTransition);
     incoming.addEventListener('ended', async () => {
       if (advancedVideos.has(incoming) || advancing) return;
       advancedVideos.add(incoming);
-      if (advancing) return;
       advancing = true;
+      const expectedCurrent = state.current;
+      const nextCurrent = (expectedCurrent + 1) % state.videos.length;
+      render({ ...state, current: nextCurrent, position: 0, changedAt: Date.now(), action: 'play' });
       try {
-        render(await api.advanceFromTv(state.current, deviceId));
+        const serverState = await api.advanceFromTv(expectedCurrent, deviceId);
+        if (serverState.current !== state.current || serverState.playlistId !== state.playlistId) render(serverState);
       } catch (error) {
         console.error('Falha ao avançar a playlist:', error);
-        setStatus('Falha ao avançar a playlist', 'error');
-        showOverlay();
+        // A reprodução local continua; o próximo sinal do Supabase sincroniza o estado.
       } finally {
         advancing = false;
       }
@@ -137,9 +164,10 @@ function render(nextState) {
       setStatus('Formato não compatível com esta TV', 'error');
       showOverlay();
     });
-    stage.append(incoming);
+    if (!incoming.isConnected) stage.append(incoming);
   }
   if (!pendingVideo) alignPlayback(state);
+  warmNextVideo(state);
 }
 
 async function connectPlayer() {
