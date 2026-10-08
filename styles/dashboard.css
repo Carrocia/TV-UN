@@ -16,3 +16,27 @@
 @media(max-width:760px){.playlist-picker{width:100%}.playlist-picker select{width:100%}}
 .dropzone{cursor:pointer;font:inherit;color:var(--ink)}.drop-copy{display:grid;gap:4px}.drop-copy strong{font-size:10px}.drop-copy>span{color:#8b978f;font-size:9px}.video-row{display:grid;grid-template-columns:minmax(0,1fr) 30px;gap:4px;padding:5px 1px}.video-select{min-width:0;display:grid;grid-template-columns:53px minmax(0,1fr);align-items:center;gap:10px;padding:5px;border:0;border-radius:7px;background:transparent;text-align:left}.video-select:hover{background:#f5f9f5}.video-action{width:27px;height:27px;align-self:center}.upload-status.has-error{color:#a13c32}.icon-button:disabled{opacity:.4;cursor:default}.icon-button:disabled:hover{background:#fff;border-color:var(--line);transform:none}
 #painel,#playlist,#conectar{scroll-margin-top:18px}
+
+/* Readability scale for the management screens. */
+.page-intro{font-size:14px;line-height:1.6}
+.eyebrow,.section-kicker{font-size:10px}
+.breadcrumb{font-size:12px}
+.panel-header h2{font-size:16px}
+.summary-label{font-size:11px}
+.summary-card strong{font-size:17px}
+.summary-caption{font-size:10px}
+.live-pill,.count-pill{font-size:10px}
+.button{font-size:12px}
+.button-small{min-height:34px;padding:8px 11px;font-size:11px}
+.now-playing strong{font-size:12px}
+.now-playing small{font-size:10px}
+.video-name{font-size:12px}
+.video-subtitle{font-size:10px}
+.playlist-empty{font-size:12px}
+.dropzone strong,.drop-copy strong{font-size:12px}
+.drop-copy>span{font-size:11px}
+.upload-status{font-size:11px}
+.format-note{font-size:10px}
+.playlist-foot{font-size:11px}
+.playlist-foot small,.enabled-label{font-size:10px}
+.editor-hint{font-size:12px}
