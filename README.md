@@ -14,6 +14,18 @@ Painel web para organizar vídeos e sincronizar a reprodução nas TVs das filia
 
 O bucket `tv-videos` é público para permitir que as TVs carreguem os vídeos diretamente. Não envie conteúdo confidencial. O painel seleciona a playlist a transmitir; a página `playlist.html` cria e organiza playlists, recebe upload e permite ordenar os vídeos. O próximo vídeo começa automaticamente quando o atual termina. Alterações em `playlists`, `playlist_items` e `playback_state` são recebidas em tempo real pelo Supabase Realtime.
 
+## Armazenamento de vídeos no Cloudflare R2
+
+O projeto pode continuar usando o Supabase para login e playlists e usar o R2 para arquivos grandes. Para ativar o upload pelo painel:
+
+1. No Cloudflare, crie um Worker e publique o conteúdo de `cloudflare/r2-upload-worker.js`.
+2. Adicione ao Worker um binding de R2 com o nome `TV_VIDEOS`, apontando para o bucket `tv-uni-videos`.
+3. Configure as variáveis `SUPABASE_URL` e `SUPABASE_ANON_KEY` com os valores de `scripts/supabase-config.js`. A chave publishable/anon é pública; nunca use uma chave `service_role` ou secret.
+4. Copie a URL `workers.dev` do Worker para `R2_UPLOAD_ENDPOINT` em `scripts/r2-config.js`.
+5. `R2_PUBLIC_URL` já contém o endereço público de desenvolvimento do bucket. Ele é adequado para o teste; a Cloudflare recomenda domínio próprio para produção.
+
+O Worker valida a sessão autenticada no Supabase e transfere vídeos em partes de 16 MiB para não exceder o limite de corpo de uma requisição. Vídeos antigos no Supabase continuam reproduzindo; novos envios usam o R2 quando `R2_UPLOAD_ENDPOINT` estiver configurado.
+
 ## Estrutura
 
 - `index.html`, `playlist.html`, `connect.html`, `login.html`, `tv.html`: páginas do painel, playlists, conexão/controle das TVs, autenticação e player.
